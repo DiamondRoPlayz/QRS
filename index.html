@@ -1,0 +1,83 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body{
+        background:rgb(15,15,15);
+        color:white;
+        font-family:Overpass,sans-serif;
+        user-select:none;-webkit-user-drag:none;
+        word-break:break-all;
+      }
+      list{
+        display:flex;
+        flex-direction:column-reverse;
+        word-break:break-all;gap:6px;
+      }
+      li{
+        background:rgb(30,30,30);
+        padding:6px;
+        border-radius: 12px;
+        display:flex;
+        flex-direction:column;
+      }
+      format{
+        opacity:.5;
+      }
+      text{
+        user-select:all;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" media="print" onload="this.onload=null;this.removeAttribute('media');" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;600;700;800;900&display=swap">
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;500;600;700;800;900&display=swap">
+    </noscript>
+  </head>
+  <body>
+    <div id="reader"></div>
+    <span>Current:</span>
+    <list id="current"></list><br>
+    <span>History:</span>
+    <list id="history"></list><br>
+    <span>Saved History:</span>
+    <list id="allResults"></list><br>
+    <script src="html5-qrcode.min.js"></script>
+    <script>
+      const sfspan=document.createElement('span');
+      sfspan.innerHTML=`Supported Formats:<br>${Object.values(Html5QrcodeSupportedFormats).filter(v=>typeof(v)=='string').map((v,i)=>`${i+1} - ${v}`).join('<br>')}`
+      document.body.append(sfspan)
+      const allResults=[...(window.localStorage.allResults||'').matchAll(/(\w+),(.+)/g)].map(v=>[v[1],v[2]]);
+      const results=[]
+      const newLi=(i,v)=>{
+        const li=document.createElement('li');
+        const fE=document.createElement('format');fE.innerText=i;
+        const tE=document.createElement('text');tE.innerText=v;
+        li.append(fE,tE);return{li,fE,tE};
+      }
+      allResults.map(([i,v])=>newLi(i,v))
+      .map(({li})=>document.querySelector("#allResults").appendChild(li));
+      const newResult=({text,format:{formatName:format}})=>{
+        document.querySelector("#current").innerHTML='';
+        const{li,fE,tE}=newLi(format,text);
+        document.querySelector("#current").appendChild(li);
+        if(results.some(([i,v])=>i===format&&v===text))return;
+        results.push([format,text]);
+        document.querySelector("#history").appendChild(li.cloneNode(true));
+        if(!allResults.some(([i,v])=>i===format&&v===text)){
+          allResults.push([format,text]);
+          window.localStorage.allResults=allResults.join('\n');
+          document.querySelector("#allResults").appendChild(li.cloneNode(true));
+        }
+      }
+      var html5QrcodeScanner=new Html5QrcodeScanner("reader",{fps:30,qrbox:250});
+      html5QrcodeScanner.render((text,{result})=>{
+        console.log(`Scan result: ${text}`,result);
+        newResult(result);
+      });
+      //newResult({text:'text,11',format:{formatName:'format'}})
+      //newResult({text:'text'.repeat(100),format:{formatName:'format'}})
+    </script>
+  </body>
+</html>
